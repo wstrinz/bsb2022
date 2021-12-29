@@ -1046,7 +1046,7 @@ a img {
   margin-left: auto;
   margin-right: auto;
 }
-@font-face {
+/* @font-face {
   font-display: auto;
   font-family: GT Walsheim;
   font-stretch: normal;
@@ -1179,7 +1179,7 @@ a img {
   font-weight: 400;
   src: url(7ebd7b67f4140dff65d1.woff2) format("woff2"),
     url(1007e338dea2cdad3403.woff) format("woff");
-}
+} */
 body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

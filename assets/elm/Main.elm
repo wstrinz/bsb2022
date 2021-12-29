@@ -1,8 +1,8 @@
 module Main exposing (..)
 
 import Browser
-import Html exposing (Html, a, article, aside, button, div, figcaption, figure, h1, img, li, node, p, section, text, ul)
-import Html.Attributes as Attr exposing (attribute, href)
+import Html exposing (Html, a, article, aside, button, div, figcaption, figure, h1, img, li, node, p, section, span, text, ul)
+import Html.Attributes as Attr exposing (attribute, class, href)
 import Html.Events exposing (onClick)
 
 
@@ -50,6 +50,11 @@ bones model =
             [ div [ Attr.id "top-nav" ]
                 [ a [ Attr.tabindex 1, Attr.title "Open Nav", onClick ToggleNav ]
                     [ node "drip-illo" [ Attr.size 36, Attr.name "Medium Audience" ] []
+                    ]
+                ]
+            , div [ Attr.id "sub-nav", Attr.classList [ ( "sub-nav", True ), ( "sub-nav--open", model.showNav ) ] ]
+                [ span [ class "sidebar-toggle" ]
+                    [ p [ class "pa-4" ] [ text "Close" ]
                     ]
                 ]
             ]
