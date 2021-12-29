@@ -32,3 +32,4 @@ bsb2022-*.tar
 npm-debug.log
 /assets/node_modules/
 
+/assets/elm-stuff/
