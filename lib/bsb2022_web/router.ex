@@ -18,6 +18,7 @@ defmodule Bsb2022Web.Router do
     pipe_through :browser
 
     get "/", PageController, :index
+    get "/stories", PageController, :stories
   end
 
   # Other scopes may use custom stacks.

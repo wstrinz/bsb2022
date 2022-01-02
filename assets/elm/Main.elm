@@ -11,16 +11,56 @@ main =
     Browser.sandbox { init = init, update = update, view = view }
 
 
+type alias Story =
+    { title : String
+    , author : String
+    , body : String
+    , id : Int
+    , read : Bool
+    }
+
+
 type alias Model =
     { counter : Int
     , showNav : Bool
+    , stories : List Story
     }
+
+
+initialStories : List Story
+initialStories =
+    [ { title = "React"
+      , author = "Jordan Walke"
+      , body = "React is a JavaScript library for building user interfaces."
+      , id = 1
+      , read = False
+      }
+    , { title = "Redux"
+      , author = "Dan Abramov"
+      , body = "Redux is a predictable state container for JavaScript apps."
+      , id = 2
+      , read = False
+      }
+    , { title = "News Happened"
+      , author = "Me"
+      , body = "I just learned is awesome!"
+      , id = 3
+      , read = False
+      }
+    , { title = "A list of small mice"
+      , author = "Me"
+      , body = "It's a list of small mice, and they're all dead!"
+      , id = 4
+      , read = False
+      }
+    ]
 
 
 init : Model
 init =
     { counter = 0
-    , showNav = True
+    , showNav = False
+    , stories = initialStories
     }
 
 
@@ -43,6 +83,72 @@ update msg model =
             { model | showNav = not model.showNav }
 
 
+slot : String -> Html.Attribute Msg
+slot slotName =
+    Attr.attribute "slot" slotName
+
+
+storyHeader : Story -> Html Msg
+storyHeader story =
+    node "bubble-banner"
+        [ slot "header-content" ]
+        [ node "drip-illo"
+            [ slot "bubble"
+            , Attr.name "medium_audience"
+            ]
+            []
+        , span
+            [ slot "heading"
+            ]
+            [ text story.title ]
+        , span
+            [ slot "description"
+            ]
+            [ text story.author ]
+        ]
+
+
+storyButton : Story -> Html Msg
+storyButton _ =
+    node "butt-on"
+        [ Attr.attribute "size" "medium"
+        , Attr.type_ "tertiary"
+        , Attr.attribute "slot" "header-toggle-open"
+        , Attr.attribute "icon" "edit"
+        , Attr.class "icon-button"
+        ]
+        [ text "Open" ]
+
+
+storyView : Story -> Html Msg
+storyView story =
+    node "roll-up-item"
+        [ attribute "clickable" "true" ]
+        [ storyHeader story
+        , storyButton story
+        , article [ slot "content" ]
+            [ h1 []
+                [ text story.title ]
+            , p []
+                [ text story.body ]
+            , node "butt-on"
+                []
+                [ text "My Button" ]
+            ]
+        ]
+
+
+storiesView : Model -> Html Msg
+storiesView model =
+    node "roll-up"
+        []
+        [ div
+            [ Attr.attribute "slot" "roll-up-item-list"
+            ]
+            (List.map storyView model.stories)
+        ]
+
+
 bones : Model -> Html Msg
 bones model =
     div [ Attr.id "grid", Attr.class "hide-right-sidebar" ]
@@ -62,52 +168,7 @@ bones model =
             [ Attr.id "main" ]
             [ node "drip-bones"
                 []
-                [ section [ attribute "width" "full", attribute "layout" "centered" ]
-                    [ article []
-                        [ h1 []
-                            [ text ("Walrus" ++ String.fromInt model.counter) ]
-                        , p []
-                            [ text "The walrus is a large flippered marine mammal with a discontinuous distribution about the North Pole in the Arctic Ocean and subarctic seas of the Northern Hemisphere." ]
-                        , node "butt-on"
-                            []
-                            [ text "My Button" ]
-                        ]
-                    , aside []
-                        [ figure
-                            [ Attr.class "tight"
-                            ]
-                            [ img
-                                [ Attr.src "https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/Pacific_Walrus_-_Bull_%288247646168%29.jpg/1200px-Pacific_Walrus_-_Bull_%288247646168%29.jpg"
-                                ]
-                                []
-                            ]
-                        , figcaption []
-                            [ text "Walrus knows your fears" ]
-                        ]
-                    ]
-                , section
-                    [ Attr.class "mt-4"
-                    ]
-                    [ article []
-                        [ h1 []
-                            [ text "Penguin" ]
-                        , p []
-                            [ text "Penguins are a group of aquatic flightless birds. They live almost exclusively in the Southern Hemisphere, with only one species, the Galápagos penguin, found north of the equator." ]
-                        ]
-                    , aside []
-                        [ figure
-                            [ Attr.class "tight"
-                            ]
-                            [ img
-                                [ Attr.src "https://www.morrishospital.org/wp-content/uploads/2018/12/penguin2_2-1024x768.jpg"
-                                ]
-                                []
-                            ]
-                        , figcaption []
-                            [ text "There are penguins plotting your downfall" ]
-                        ]
-                    ]
-                ]
+                [ storiesView model ]
             ]
         , div [ Attr.id "right", attribute "data-component" "right-sidebar" ] [ text "hi" ]
         ]
