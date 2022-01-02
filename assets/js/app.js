@@ -50,6 +50,20 @@ liveSocket.connect();
 // >> liveSocket.disableLatencySim()
 window.liveSocket = liveSocket;
 
+class HTMElement extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: "open" });
+  }
+
+  connectedCallback() {
+    this.shadowRoot.innerHTML = this.getAttribute("data-html");
+  }
+}
+
+customElements.define("htm-element", HTMElement);
+console.log("cust", customElements.get("htm-element"));
+
 const $root = document.createElement("div");
 document.body.appendChild($root);
 

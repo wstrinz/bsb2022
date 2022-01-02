@@ -1,20 +1,33 @@
 module Main exposing (..)
 
 import Browser
-import Html exposing (Html, a, article, aside, button, div, figcaption, figure, h1, img, li, node, p, section, span, text, ul)
-import Html.Attributes as Attr exposing (attribute, class, href)
+import Html exposing (Html, a, article, div, node, p, span, text)
+import Html.Attributes as Attr exposing (attribute, class)
 import Html.Events exposing (onClick)
+import Html.Keyed as Keyed
+import Json.Decode as Decode exposing (Decoder)
+import Json.Decode.Pipeline exposing (required)
+import Maybe exposing (Maybe(..))
+import RemoteData exposing (RemoteData(..), WebData)
+import RemoteData.Http
 
 
-main : Program () Model Msg
+main : Program Flags Model Msg
 main =
-    Browser.sandbox { init = init, update = update, view = view }
+    Browser.element { init = init, update = update, view = view, subscriptions = subscriptions }
+
+
+subscriptions : Model -> Sub Msg
+subscriptions _ =
+    Sub.none
 
 
 type alias Story =
     { title : String
-    , author : String
-    , body : String
+    , author : Maybe String
+    , content : String
+    , description : Maybe String
+    , link : String
     , id : Int
     , read : Bool
     }
@@ -23,64 +36,87 @@ type alias Story =
 type alias Model =
     { counter : Int
     , showNav : Bool
-    , stories : List Story
+    , stories : WebData (List Story)
     }
 
 
 initialStories : List Story
 initialStories =
-    [ { title = "React"
-      , author = "Jordan Walke"
-      , body = "React is a JavaScript library for building user interfaces."
+    [ { title = "The story of the day"
+      , author = Just "The author"
+      , content = "The content"
+      , description = Just "The description"
+      , link = "http://example.com"
       , id = 1
-      , read = False
-      }
-    , { title = "Redux"
-      , author = "Dan Abramov"
-      , body = "Redux is a predictable state container for JavaScript apps."
-      , id = 2
-      , read = False
-      }
-    , { title = "News Happened"
-      , author = "Me"
-      , body = "I just learned is awesome!"
-      , id = 3
-      , read = False
-      }
-    , { title = "A list of small mice"
-      , author = "Me"
-      , body = "It's a list of small mice, and they're all dead!"
-      , id = 4
       , read = False
       }
     ]
 
 
-init : Model
-init =
-    { counter = 0
-    , showNav = False
-    , stories = initialStories
-    }
+type alias Flags =
+    {}
+
+
+init : Flags -> ( Model, Cmd Msg )
+init _ =
+    ( { counter = 0
+      , showNav = False
+      , stories = NotAsked
+      }
+    , RemoteData.Http.get "/api/stories" FetchStoriesResponse storiesDecoder
+    )
 
 
 type Msg
     = Increment
     | Decrement
     | ToggleNav
+    | FetchStories
+    | FetchStoriesResponse (WebData (List Story))
 
 
-update : Msg -> Model -> Model
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Increment ->
-            { model | counter = model.counter + 1 }
+            ( { model | counter = model.counter + 1 }
+            , Cmd.none
+            )
 
         Decrement ->
-            { model | counter = model.counter - 1 }
+            ( { model | counter = model.counter - 1 }
+            , Cmd.none
+            )
 
         ToggleNav ->
-            { model | showNav = not model.showNav }
+            ( { model | showNav = not model.showNav }
+            , Cmd.none
+            )
+
+        FetchStories ->
+            ( { model | stories = Loading }
+            , RemoteData.Http.get "/api/stories" FetchStoriesResponse storiesDecoder
+            )
+
+        FetchStoriesResponse response ->
+            ( { model | stories = response }, Cmd.none )
+
+
+storiesDecoder : Decoder (List Story)
+storiesDecoder =
+    Decode.list storyDecoder
+
+
+storyDecoder : Decoder Story
+storyDecoder =
+    Decode.succeed Story
+        |> required "title" Decode.string
+        |> required "author" (Decode.nullable Decode.string)
+        |> required "content" Decode.string
+        |> required "description" (Decode.nullable Decode.string)
+        |> required "link" Decode.string
+        |> required "id" Decode.int
+        |> required "read" Decode.bool
 
 
 slot : String -> Html.Attribute Msg
@@ -88,9 +124,9 @@ slot slotName =
     Attr.attribute "slot" slotName
 
 
-storyHeader : Story -> Html Msg
+storyHeader : Story -> List (Html Msg)
 storyHeader story =
-    node "bubble-banner"
+    [ node "bubble-banner"
         [ slot "header-content" ]
         [ node "drip-illo"
             [ slot "bubble"
@@ -104,13 +140,9 @@ storyHeader story =
         , span
             [ slot "description"
             ]
-            [ text story.author ]
+            [ text (story.author |> Maybe.withDefault "") ]
         ]
-
-
-storyButton : Story -> Html Msg
-storyButton _ =
-    node "butt-on"
+    , node "butt-on"
         [ Attr.attribute "size" "medium"
         , Attr.type_ "tertiary"
         , Attr.attribute "slot" "header-toggle-open"
@@ -118,24 +150,33 @@ storyButton _ =
         , Attr.class "icon-button"
         ]
         [ text "Open" ]
+    , node "butt-on"
+        [ Attr.attribute "size" "medium"
+        , Attr.type_ "tertiary"
+        , Attr.attribute "slot" "header-toggle-close"
+        ]
+        [ text "Close" ]
+    ]
+
+
+storyContent : Story -> Html Msg
+storyContent story =
+    Keyed.node "div" [] [ ( String.fromInt story.id, node "htm-element" [ attribute "data-html" story.content ] [] ) ]
 
 
 storyView : Story -> Html Msg
 storyView story =
     node "roll-up-item"
-        [ attribute "clickable" "true" ]
-        [ storyHeader story
-        , storyButton story
-        , article [ slot "content" ]
-            [ h1 []
-                [ text story.title ]
-            , p []
-                [ text story.body ]
-            , node "butt-on"
-                []
-                [ text "My Button" ]
-            ]
-        ]
+        [ attribute "open" "true", attribute "clickable" "true" ]
+        (storyHeader story
+            ++ [ article [ slot "content" ]
+                    [ storyContent story
+                    , node "butt-on"
+                        []
+                        [ text "My Button" ]
+                    ]
+               ]
+        )
 
 
 storiesView : Model -> Html Msg
@@ -145,7 +186,7 @@ storiesView model =
         [ div
             [ Attr.attribute "slot" "roll-up-item-list"
             ]
-            (List.map storyView model.stories)
+            (List.map storyView <| RemoteData.withDefault initialStories model.stories)
         ]
 
 
