@@ -37,7 +37,12 @@ type alias Model =
     { counter : Int
     , showNav : Bool
     , stories : WebData (List Story)
+    , storyCursor : Int
     }
+
+
+type alias Flags =
+    {}
 
 
 initialStories : List Story
@@ -53,15 +58,12 @@ initialStories =
     ]
 
 
-type alias Flags =
-    {}
-
-
 init : Flags -> ( Model, Cmd Msg )
 init _ =
     ( { counter = 0
       , showNav = False
       , stories = NotAsked
+      , storyCursor = 0
       }
     , RemoteData.Http.get "/api/stories" FetchStoriesResponse storiesDecoder
     )
@@ -79,12 +81,12 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Increment ->
-            ( { model | counter = model.counter + 1 }
+            ( { model | storyCursor = model.storyCursor + 1 }
             , Cmd.none
             )
 
         Decrement ->
-            ( { model | counter = model.counter - 1 }
+            ( { model | storyCursor = model.storyCursor - 1 }
             , Cmd.none
             )
 
@@ -124,14 +126,26 @@ slot slotName =
     Attr.attribute "slot" slotName
 
 
-storyHeader : Story -> List (Html Msg)
-storyHeader story =
+storyDescription : Bool -> Story -> List (Html Msg)
+storyDescription showDescription story =
+    let
+        preview =
+            if showDescription then
+                [ node "htm-element" [ attribute "data-html" (story.description |> Maybe.withDefault "" |> String.slice 0 350) ] [] ]
+
+            else
+                []
+    in
+    (Maybe.map (\a -> a ++ " - ") story.author |> Maybe.withDefault "" |> text)
+        :: preview
+
+
+storyHeader : Bool -> Story -> List (Html Msg)
+storyHeader isOpen story =
     [ node "bubble-banner"
         [ slot "header-content" ]
-        [ node "drip-illo"
-            [ slot "bubble"
-            , Attr.name "medium_audience"
-            ]
+        [ Html.img
+            [ attribute "src" "https://marginalrevolution.com/wp-content/uploads/2016/10/MR-logo-thumbnail.png", slot "bubble" ]
             []
         , span
             [ slot "heading"
@@ -140,7 +154,7 @@ storyHeader story =
         , span
             [ slot "description"
             ]
-            [ text (story.author |> Maybe.withDefault "") ]
+            (storyDescription (not isOpen) story)
         ]
     , node "butt-on"
         [ Attr.attribute "size" "medium"
@@ -164,11 +178,19 @@ storyContent story =
     Keyed.node "div" [] [ ( String.fromInt story.id, node "htm-element" [ attribute "data-html" story.content ] [] ) ]
 
 
-storyView : Story -> Html Msg
-storyView story =
+storyView : Bool -> Story -> Html Msg
+storyView isOpen story =
+    let
+        isOpenAttr =
+            if isOpen then
+                "true"
+
+            else
+                "false"
+    in
     node "roll-up-item"
-        [ attribute "open" "true", attribute "clickable" "true" ]
-        (storyHeader story
+        [ attribute "open" isOpenAttr, attribute "clickable" "true" ]
+        (storyHeader isOpen story
             ++ [ article [ slot "content" ]
                     [ storyContent story
                     , node "butt-on"
@@ -181,12 +203,22 @@ storyView story =
 
 storiesView : Model -> Html Msg
 storiesView model =
+    let
+        currentStories stories =
+            List.drop model.storyCursor stories
+
+        indexedStoryView idx =
+            storyView (idx == 0)
+    in
     node "roll-up"
         []
         [ div
             [ Attr.attribute "slot" "roll-up-item-list"
             ]
-            (List.map storyView <| RemoteData.withDefault initialStories model.stories)
+            (RemoteData.withDefault initialStories model.stories
+                |> currentStories
+                |> List.indexedMap indexedStoryView
+            )
         ]
 
 
@@ -195,8 +227,14 @@ bones model =
     div [ Attr.id "grid", Attr.class "hide-right-sidebar" ]
         [ div [ Attr.id "left" ]
             [ div [ Attr.id "top-nav" ]
-                [ a [ Attr.tabindex 1, Attr.title "Open Nav", onClick ToggleNav ]
-                    [ node "drip-illo" [ Attr.size 36, Attr.name "Medium Audience" ] []
+                [ a [ Attr.tabindex 2, Attr.title "Open Nav", onClick ToggleNav ]
+                    [ node "drip-illo" [ attribute "size" "x-small", Attr.name "Settings" ] []
+                    ]
+                , a [ Attr.tabindex 1, Attr.title "Last", onClick Decrement ]
+                    [ node "drip-illo" [ attribute "size" "x-small", Attr.name "Medium Audience" ] []
+                    ]
+                , a [ Attr.tabindex 2, Attr.title "Next", onClick Increment ]
+                    [ node "drip-illo" [ attribute "size" "x-small", Attr.name "Party" ] []
                     ]
                 ]
             , div [ Attr.id "sub-nav", Attr.classList [ ( "sub-nav", True ), ( "sub-nav--open", model.showNav ) ] ]
