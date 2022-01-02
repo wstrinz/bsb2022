@@ -60,7 +60,8 @@ if config_env() == :prod do
   # If you are doing OTP releases, you need to instruct Phoenix
   # to start each relevant endpoint:
   #
-  #     config :bsb2022, Bsb2022Web.Endpoint, server: true
+  config :bsb2022, Bsb2022Web.Endpoint, server: true
+
   #
   # Then you can assemble a release by calling `mix release`.
   # See `mix help release` for more information.

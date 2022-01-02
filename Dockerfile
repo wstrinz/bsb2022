@@ -1,7 +1,10 @@
-FROM erlang:23.3
+ARG MIX_ENV="prod"
+
+FROM erlang:23.3 AS build
 
 ENV ELIXIR_VERSION="v1.13.1"
 ENV RUST_VERSION="1.57.0"
+ENV NODE_VERSION="14.x"
 ENV LANG="C.UTF-8"
 
 RUN apt-get update && \
@@ -10,6 +13,7 @@ RUN apt-get update && \
   curl \
   gcc \
   libc6-dev \
+  inotify-tools \
   -qqy \
   --no-install-recommends \
   && rm -rf /var/lib/apt/lists/*
@@ -34,9 +38,66 @@ RUN RUST_ARCHIVE="rust-$RUST_VERSION-x86_64-unknown-linux-gnu.tar.gz" && \
   && rm $RUST_ARCHIVE \
   && ./install.sh
 
+ENV NODE_DOWNLOAD_URL="https://deb.nodesource.com/setup_$NODE_VERSION"
+RUN curl -sL $NODE_DOWNLOAD_URL | bash - \
+  && apt-get install -y nodejs
+
+RUN npm install --unsafe-perm -g elm
+
 WORKDIR /app
 
-COPY mix.exs .
-COPY mix.lock .
+# install Hex + Rebar
+RUN mix do local.hex --force, local.rebar --force
 
-CMD mix local.hex --force && mix deps.get && mix phx.server
+# set build ENV
+ENV MIX_ENV=prod
+
+# install mix dependencies
+COPY mix.exs mix.lock ./
+COPY config config
+RUN mix deps.get --only $MIX_ENV
+RUN mix deps.compile
+
+# build assets
+COPY assets assets
+RUN cd assets && npm install && node build.js
+RUN mix phx.digest
+
+# build project
+COPY priv priv
+COPY lib lib
+RUN mix compile
+
+# build release
+# at this point we should copy the rel directory but
+# we are not using it so we can omit it
+# COPY rel rel
+RUN mix release
+
+# prepare release image
+FROM erlang:23.3 AS app
+
+# install runtime dependencies
+RUN apt-get update && \
+  apt-get install \
+  openssl postgresql-client \
+  inotify-tools \
+  -qqy \
+  --no-install-recommends \
+  && rm -rf /var/lib/apt/lists/*
+
+EXPOSE 4000
+ENV MIX_ENV=prod
+
+# prepare app directory
+RUN mkdir /app
+WORKDIR /app
+
+# copy release to app container
+COPY --from=build /app/_build/prod/rel/bsb2022 .
+COPY entrypoint.sh .
+RUN chown -R nobody: /app
+USER nobody
+
+ENV HOME=/app
+CMD ["bash", "/app/entrypoint.sh"]
