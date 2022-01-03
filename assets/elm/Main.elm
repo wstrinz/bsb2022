@@ -7,6 +7,7 @@ import Html.Events exposing (onClick)
 import Html.Keyed as Keyed
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline exposing (required)
+import Keyboard exposing (Key(..), RawKey(..))
 import Maybe exposing (Maybe(..))
 import RemoteData exposing (RemoteData(..), WebData)
 import RemoteData.Http
@@ -19,7 +20,10 @@ main =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Sub.none
+    Sub.batch
+        [ Keyboard.downs KeyDown
+        , Keyboard.ups KeyUp
+        ]
 
 
 type alias Story =
@@ -38,6 +42,7 @@ type alias Model =
     , showNav : Bool
     , stories : WebData (List Story)
     , storyCursor : Int
+    , pressedKeys : List Key
     }
 
 
@@ -64,6 +69,7 @@ init _ =
       , showNav = False
       , stories = NotAsked
       , storyCursor = 0
+      , pressedKeys = []
       }
     , RemoteData.Http.get "/api/stories" FetchStoriesResponse storiesDecoder
     )
@@ -75,6 +81,8 @@ type Msg
     | ToggleNav
     | FetchStories
     | FetchStoriesResponse (WebData (List Story))
+    | KeyDown RawKey
+    | KeyUp RawKey
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -102,6 +110,26 @@ update msg model =
 
         FetchStoriesResponse response ->
             ( { model | stories = response }, Cmd.none )
+
+        KeyDown keyMsg ->
+            case Keyboard.anyKeyOriginal keyMsg of
+                Just (Character "j") ->
+                    ( { model | storyCursor = model.storyCursor + 1 }
+                    , Cmd.none
+                    )
+
+                Just (Character "k") ->
+                    ( { model | storyCursor = model.storyCursor - 1 }
+                    , Cmd.none
+                    )
+
+                _ ->
+                    ( model
+                    , Cmd.none
+                    )
+
+        KeyUp _ ->
+            ( model, Cmd.none )
 
 
 storiesDecoder : Decoder (List Story)
