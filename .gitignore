@@ -33,3 +33,5 @@ npm-debug.log
 /assets/node_modules/
 
 /assets/elm-stuff/
+
+/config/docker.env
