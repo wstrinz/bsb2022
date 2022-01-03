@@ -46,6 +46,8 @@ RUN RUST_ARCHIVE="rust-$RUST_VERSION-x86_64-unknown-linux-gnu.tar.gz" && \
   && rm $RUST_ARCHIVE \
   && ./install.sh
 
+RUN npm install -g elm && npm install -g esbuild
+
 # prepare build dir
 WORKDIR /app
 
@@ -76,6 +78,7 @@ COPY priv priv
 COPY assets assets
 
 # compile assets
+RUN cd assets && npm install
 RUN mix assets.deploy
 
 # Compile the release
