@@ -31,8 +31,10 @@ ENV RUST_VERSION="1.57.0"
 #   && rm -rf /var/lib/apt/lists/*
 
 # install build dependencies
-RUN apt-get update -y && apt-get install -y build-essential git curl nodejs \
+RUN apt-get update -y && apt-get install -y build-essential git curl nodejs openssl \
   && apt-get clean && rm -f /var/lib/apt/lists/*_*
+
+RUN git config --global http.postBuffer 524288000 && git config --global https.postBuffer 524288000
 
 # Install Rust
 RUN RUST_ARCHIVE="rust-$RUST_VERSION-x86_64-unknown-linux-gnu.tar.gz" && \
