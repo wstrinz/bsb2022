@@ -17,16 +17,39 @@ ARG RUNNER_IMAGE="debian:bullseye-20210902-slim"
 
 FROM ${BUILDER_IMAGE} as builder
 
+ENV RUST_VERSION="1.57.0"
+
+# RUN apt-get update && \
+#   apt-get install \
+#   ca-certificates \
+#   curl \
+#   gcc \
+#   libc6-dev \
+#   inotify-tools \
+#   -qqy \
+#   --no-install-recommends \
+#   && rm -rf /var/lib/apt/lists/*
+
 # install build dependencies
-RUN apt-get update -y && apt-get install -y build-essential git \
-    && apt-get clean && rm -f /var/lib/apt/lists/*_*
+RUN apt-get update -y && apt-get install -y build-essential git curl nodejs \
+  && apt-get clean && rm -f /var/lib/apt/lists/*_*
+
+# Install Rust
+RUN RUST_ARCHIVE="rust-$RUST_VERSION-x86_64-unknown-linux-gnu.tar.gz" && \
+  RUST_DOWNLOAD_URL="https://static.rust-lang.org/dist/$RUST_ARCHIVE" && \
+  mkdir -p /rust \
+  && cd /rust \
+  && curl -fsOSL $RUST_DOWNLOAD_URL \
+  && tar -C /rust -xzf $RUST_ARCHIVE --strip-components=1 \
+  && rm $RUST_ARCHIVE \
+  && ./install.sh
 
 # prepare build dir
 WORKDIR /app
 
 # install hex + rebar
 RUN mix local.hex --force && \
-    mix local.rebar --force
+  mix local.rebar --force
 
 # set build ENV
 ENV MIX_ENV="prod"
