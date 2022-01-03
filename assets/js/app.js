@@ -57,7 +57,14 @@ class HTMElement extends HTMLElement {
   }
 
   connectedCallback() {
-    this.shadowRoot.innerHTML = this.getAttribute("data-html");
+    this.shadowRoot.innerHTML = `
+    <style>
+      img {
+        max-width: 100%;
+      }
+    </style>
+    ${this.getAttribute("data-html")}
+    `;
   }
 }
 

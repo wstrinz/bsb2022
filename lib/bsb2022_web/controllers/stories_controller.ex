@@ -2,7 +2,7 @@ defmodule Bsb2022Web.StoriesController do
   use Bsb2022Web, :controller
 
   def index(conn, _params) do
-    response = HTTPoison.get!("https://www.rockpapershotgun.com/feed/reviews")
+    response = HTTPoison.get!("https://www.rockpapershotgun.com/feed/news")
     {:ok, rss_result} = FastRSS.parse(response.body)
 
     example_stories =
