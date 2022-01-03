@@ -9,6 +9,7 @@ import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline exposing (required)
 import Keyboard exposing (Key(..), RawKey(..))
 import Maybe exposing (Maybe(..))
+import Maybe.Extra
 import RemoteData exposing (RemoteData(..), WebData)
 import RemoteData.Http
 
@@ -29,7 +30,7 @@ subscriptions _ =
 type alias Story =
     { title : String
     , author : Maybe String
-    , content : String
+    , content : Maybe String
     , description : Maybe String
     , link : String
     , id : Int
@@ -54,7 +55,7 @@ initialStories : List Story
 initialStories =
     [ { title = "The story of the day"
       , author = Just "The author"
-      , content = "The content"
+      , content = Just "The content"
       , description = Just "The description"
       , link = "http://example.com"
       , id = 1
@@ -142,7 +143,7 @@ storyDecoder =
     Decode.succeed Story
         |> required "title" Decode.string
         |> required "author" (Decode.nullable Decode.string)
-        |> required "content" Decode.string
+        |> required "content" (Decode.nullable Decode.string)
         |> required "description" (Decode.nullable Decode.string)
         |> required "link" Decode.string
         |> required "id" Decode.int
@@ -173,10 +174,11 @@ storyHeader isOpen story =
     [ node "bubble-banner"
         [ slot "header-content" ]
         [ Html.img
-            [ attribute "src" "https://marginalrevolution.com/wp-content/uploads/2016/10/MR-logo-thumbnail.png", slot "bubble" ]
+            [ attribute "src" "https://www.rockpapershotgun.com/static/4a50b66f9c50455a1f1ff417b5ada51c/icon/favicon-32x32.png", slot "bubble" ]
             []
         , span
             [ slot "heading"
+            , Attr.style "white-space" "normal"
             ]
             [ text story.title ]
         , span
@@ -203,7 +205,11 @@ storyHeader isOpen story =
 
 storyContent : Story -> Html Msg
 storyContent story =
-    Keyed.node "div" [] [ ( String.fromInt story.id, node "htm-element" [ attribute "data-html" story.content ] [] ) ]
+    let
+        content =
+            Maybe.Extra.or story.content story.description |> Maybe.withDefault "<p>No content</p>"
+    in
+    Keyed.node "div" [] [ ( String.fromInt story.id, node "htm-element" [ attribute "data-html" content ] [] ) ]
 
 
 storyView : Bool -> Story -> Html Msg
