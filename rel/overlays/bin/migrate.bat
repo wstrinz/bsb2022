@@ -1,0 +1,1 @@
+call "%~dp0\bsb2022" eval Bsb2022.Release.migrate
