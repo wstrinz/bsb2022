@@ -44,9 +44,6 @@ RUN curl -sL $NODE_DOWNLOAD_URL | bash - \
 
 RUN npm install --unsafe-perm -g elm
 
-# Bust cache for app
-ARG bsb_version="0.1.2"
-
 WORKDIR /app
 
 # install Hex + Rebar
@@ -57,19 +54,22 @@ ENV MIX_ENV=prod
 
 # install mix dependencies
 COPY mix.exs mix.lock ./
-COPY config config
 RUN mix deps.get --only $MIX_ENV
+
+COPY config/config.exs config/${MIX_ENV}.exs config/
 RUN mix deps.compile
+
+COPY priv priv
 
 # build assets
 COPY assets assets
-RUN cd assets && npm install && node build.js
-RUN mix phx.digest
+RUN mix assets.deploy
 
 # build project
-COPY priv priv
 COPY lib lib
 RUN mix compile
+
+COPY config/runtime.exs config/
 
 # build release
 # at this point we should copy the rel directory but
@@ -78,13 +78,14 @@ RUN mix compile
 RUN mix release
 
 # prepare release image
-FROM erlang:23.3 AS app
+FROM debian:bullseye-20210902-slim AS app
 
 # install runtime dependencies
 RUN apt-get update && \
   apt-get install \
   openssl postgresql-client \
   inotify-tools \
+  locales \
   -qqy \
   --no-install-recommends \
   && rm -rf /var/lib/apt/lists/*
@@ -92,15 +93,20 @@ RUN apt-get update && \
 EXPOSE 4000
 ENV MIX_ENV=prod
 
+# Set the locale
+RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen
+
+ENV LANG en_US.UTF-8
+ENV LANGUAGE en_US:en
+ENV LC_ALL en_US.UTF-8
+
 # prepare app directory
 RUN mkdir /app
 WORKDIR /app
+RUN chown -R nobody: /app
 
 # copy release to app container
-COPY --from=build /app/_build/prod/rel/bsb2022 .
-COPY entrypoint.sh .
-RUN chown -R nobody: /app
+COPY --from=build --chown=nobody:root /app/_build/prod/rel/bsb2022 ./
 USER nobody
 
-ENV HOME=/app
-CMD ["bash", "/app/entrypoint.sh"]
+CMD /app/bin/bsb2022 start
