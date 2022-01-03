@@ -7,8 +7,8 @@ networks:
 
 services:
   app:
-    # image: wstrinz/bsb2022:0.1.1
-    build: .
+    image: wstrinz/bsb2022:0.1.2
+    # build: .
     ports:
       - "80:4000"
     env_file:

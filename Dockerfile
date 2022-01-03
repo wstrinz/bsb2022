@@ -44,6 +44,9 @@ RUN curl -sL $NODE_DOWNLOAD_URL | bash - \
 
 RUN npm install --unsafe-perm -g elm
 
+# Bust cache for app
+ARG bsb_version="0.1.2"
+
 WORKDIR /app
 
 # install Hex + Rebar

@@ -221,9 +221,6 @@ storyView isOpen story =
         (storyHeader isOpen story
             ++ [ article [ slot "content" ]
                     [ storyContent story
-                    , node "butt-on"
-                        []
-                        [ text "My Button" ]
                     ]
                ]
         )
